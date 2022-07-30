@@ -6,17 +6,8 @@ use serde::{Serialize};
 use mp4::FourCC;
 
 
-type Sample = i16;
-
-
-//const SAMPLE_SIZE: u16 = std::mem::size_of::<Sample>() as u16;
-
 const M_PI: f64 = 3.14159265358979323846;
 const SAMPLE_MAX: u16 = 32767;
-// const DURATION: u32 = 5;
-// const SR: u32 = 44100;
-// const NCHANNELS: u16 = 1;
-// const NSAMPLES: u32 = NCHANNELS as u32 * DURATION * SR;
 
 #[derive(Serialize, PartialEq, Debug)]
 struct RiffHeader {
@@ -26,10 +17,10 @@ struct RiffHeader {
 }
 
 impl RiffHeader {
-    fn new(NSAMPLES: u32, SAMPLE_SIZE: u16) -> Self {
+    fn new(nsamples: u32, sample_size: u16) -> Self {
         RiffHeader {
             id: FourCC::from_str("RIFF").unwrap(),
-            size: 36 + NSAMPLES * SAMPLE_SIZE as u32,
+            size: 36 + nsamples * sample_size as u32,
             ftype: FourCC::from_str("WAVE").unwrap(),
         }
     }
@@ -55,15 +46,15 @@ struct FmtChunk {
 }
 
 impl FmtChunk {
-    fn new(SR: u32, NCHANNELS: u16, SAMPLE_SIZE: u16, bits_per_sample: u16) -> Self {
+    fn new(sample_rate: u32, nchannels: u16, sample_size: u16, bits_per_sample: u16) -> Self {
         FmtChunk {
             id: FourCC::from_str("fmt ").unwrap(),
             size: 16,
             fmt_tag: 1,
-            channels: NCHANNELS,
-            samples_per_sec: SR,
-            bytes_per_sec: NCHANNELS as u32 * SR * SAMPLE_SIZE as u32,
-            block_align: NCHANNELS * SAMPLE_SIZE,
+            channels: nchannels,
+            samples_per_sec: sample_rate,
+            bytes_per_sec: nchannels as u32 * sample_rate * sample_size as u32,
+            block_align: nchannels * sample_size,
             bits_per_sample,
         }
     }
@@ -76,72 +67,42 @@ struct DataHeader {
 }
 
 impl DataHeader {
-    fn new(NSAMPLES: u32, SAMPLE_SIZE: u16) -> Self {
+    fn new(nsamples: u32, sample_size: u16) -> Self {
         DataHeader {
             id: FourCC::from_str("data").unwrap(),
-            size: NSAMPLES * SAMPLE_SIZE as u32,
+            size: nsamples * sample_size as u32,
         }
     }
 }
 
 #[derive(Serialize, PartialEq, Debug)]
-pub struct WavHeader {
+struct WavHeader {
     riff_header: RiffHeader,
     fmt_chunk: FmtChunk,
     data_header: DataHeader,
 }
 
 impl WavHeader {
-    pub fn new(config: Config) -> Self {
+    fn new(config: &Config) -> Self {
         WavHeader {
             riff_header: RiffHeader::new(config.nsamples, config.sample_size),
             fmt_chunk: FmtChunk::new(config.sample_rate, config.channels, config.sample_size, config.bits_per_sample),
             data_header: DataHeader::new(config.nsamples, config.sample_size),
         }
     }
-
-    pub fn create_wav(&self, p: &str) {
-        let path = Path::new(p);
-        let display = path.display();
-
-        let mut file = match File::create(&path) {
-            Err(why) => panic!("couldn't create {}. Error: {}", display, why),
-            Ok(file) => file,
-        };
-
-        // We have to serialize the struct's data and turn it into a Vec<u8>
-		// this actually works with write_all(&[u8]) because Vec<T> implements 
-		// AsRef<[T]>, so &Vec<T> can be coerced into &[T]
-        let encoded: Vec<u8> = bincode::serialize(&self).unwrap();
-        match file.write_all(&encoded) {
-            Err(why) => panic!("couldn't write to {}: {}", display, why),
-            Ok(_) => println!("successfully wrote to {}", display),
-        }
-
-    }
 }
 
-
-fn as_u8_slice(slice_i16: &[i16]) -> &[u8] {
-    unsafe {
-        std::slice::from_raw_parts(
-            slice_i16.as_ptr() as *const u8, 
-            slice_i16.len() * std::mem::size_of::<u16>(),
-        )
-    }
-}
 
 #[derive(Serialize, PartialEq, Debug)]
-pub struct Wave {
+pub struct Wave<'a> {
     header: WavHeader,
-    config: Config,
+    config: &'a Config,
 }
 
-impl Wave {
-    pub fn new(config: Config) -> Self {
+impl<'a> Wave<'a> {
+    pub fn new(config: &'a Config) -> Self {
         Wave { 
             header: WavHeader::new(config),
-            /* TODO: fix the config issue (lifetimes?) & get the buffer to print (shouldn't the buffer also be written in src/main.rs?) */
             config,
         }
     }
@@ -165,13 +126,11 @@ impl Wave {
         }
     }
 
-    // buf: &mut [Sample; config.nsamples as usize]
-    pub fn write_data(&self, p: &str) {
+    pub fn write_data(&self, p: &str, frequency: f64) {
         let mut buf = Vec::new();
-        // let mut t_buf: [Sample; self.config.nsamples] = [0; self.config.nsamples as usize]; 
         let amplitude = 0.2;
         for i in 0 .. self.config.nsamples {
-            let sample = SAMPLE_MAX as f64 * amplitude * (2.0 * M_PI * 440.0 * i as f64/self.config.sample_rate as f64).sin();
+            let sample = SAMPLE_MAX as f64 * amplitude * (2.0 * M_PI * frequency * i as f64/self.config.sample_rate as f64).sin();
             buf.push(sample as i16);
             // t_buf[i as usize] = sample as i16;
         }
@@ -194,14 +153,13 @@ impl Wave {
 }
 
 #[derive(Serialize, PartialEq, Debug)]
-// Config allows you to set the different parameters, such as NCHANNELS, SR, bit depth, etc. 
 pub struct Config {
-    sample_size: u16,
-    channels: u16,
-    sample_rate: u32,
-    bits_per_sample: u16,
-    nsamples: u32,
-    duration: u32,
+    pub sample_size: u16,
+    pub channels: u16,
+    pub sample_rate: u32,
+    pub bits_per_sample: u16,
+    pub nsamples: u32,
+    pub duration: u32,
 }
 
 impl Config {
@@ -214,5 +172,14 @@ impl Config {
             duration,
             nsamples: channels as u32 * duration * sample_rate
         }
+    }
+}
+
+fn as_u8_slice(slice_i16: &[i16]) -> &[u8] {
+    unsafe {
+        std::slice::from_raw_parts(
+            slice_i16.as_ptr() as *const u8, 
+            slice_i16.len() * std::mem::size_of::<u16>(),
+        )
     }
 }
