@@ -17,7 +17,10 @@ fn main() {
         nsamples: NSAMPLES,
         duration: 5,
     };
+
     let wav_file = Wave::new(&config);    
     wav_file.write_header("output.wav");    
-    wav_file.write_data("output.wav", 220.0);
+
+    let frequency = 220.0;
+    wav_file.write_data("output.wav", frequency);
 }
