@@ -132,12 +132,8 @@ impl<'a> Wave<'a> {
         for i in 0 .. self.config.nsamples {
             let sample = SAMPLE_MAX as f64 * amplitude * (2.0 * M_PI * frequency * i as f64/self.config.sample_rate as f64).sin();
             buf.push(sample as i16);
-            // t_buf[i as usize] = sample as i16;
         }
         println!("Printing from buffer:\n");
-        // for (i, sample) in buf.into_iter().enumerate() {
-        //     println!("i: {}, sample value: {}", i, sample);
-        // }
     
         let buf_as_u8 = as_u8_slice(&buf);
         let mut file = OpenOptions::new().
@@ -149,6 +145,12 @@ impl<'a> Wave<'a> {
             Err(why) => panic!("couldn't write sample data to {}: {}", p, why),
             Ok(_) => println!("successfully appended sample data to {}", p),
         }
+    }
+
+    pub fn read_data(&self, p: &str) -> Vec<i16> {
+        // 1. extract metadata from header 
+        // 2. write data to buffer
+        todo!()
     }
 }
 
