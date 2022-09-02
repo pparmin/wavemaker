@@ -2,6 +2,8 @@ use std::{fs::File, str::FromStr};
 use std::fs::OpenOptions;
 use std::io::prelude::*;
 use std::path::Path;
+use std::io::BufReader;
+
 use serde::{Serialize};
 use mp4::FourCC;
 
@@ -147,10 +149,26 @@ impl<'a> Wave<'a> {
         }
     }
 
-    pub fn read_data(&self, p: &str) -> Vec<i16> {
+    pub fn read_data(&self, p: &str) {
         // 1. extract metadata from header 
         // 2. write data to buffer
-        todo!()
+        let mut buf = Vec::new();
+        let mut file = File::open(p).unwrap();
+
+        let n = match file.read_to_end(&mut buf) {
+            Ok(n) => {
+                println!("Successfully read file \"{}\"", p);
+                n
+            },
+            Err(e) => panic!("the data could not be read into the buffer: {}", e)
+        };
+
+        println!("Length of buffer: {}", n);
+
+        for v in buf.iter() {
+            println!("Value: {}", *v as char);
+        }
+        
     }
 }
 
