@@ -136,7 +136,7 @@ impl<'a> Wave<'a> {
         }
         println!("Printing from buffer:\n");
     
-        let buf_as_u8 = as_u8_slice(&buf);
+        let buf_as_u8 = samples_as_u8(&buf);
         // for (i, byte) in buf_as_u8.iter().enumerate() {
         //     println!("Byte #{}: {:x}", i, byte);
         // }
@@ -151,6 +151,10 @@ impl<'a> Wave<'a> {
         }
     }
 
+    /* 
+     * Read data currently only reads the sample data into a buffer 
+     * The header data is currently not extracted 
+     */
     pub fn read_data(&self, p: &str) {
         // 1. extract metadata from header 
         // 2. write data to buffer
@@ -166,7 +170,7 @@ impl<'a> Wave<'a> {
         };
         println!("Length of buffer: {}", n);
 
-        let buf_as_i16 = as_i16_slice(&buf);
+        let buf_as_i16 = samples_as_i16(&buf);
         
         println!("DATA SECTION");
         for sample in buf_as_i16 {
@@ -204,9 +208,9 @@ impl Config {
  * care of this. 
  * 
  * FUTURE REFACTOR: 
- * Rename as_i6_slice to samples_in_i6 & as_u8_slice samples_in_u8
+ * Rename as_i6_slice to samples_in_i16 & samples_as_u8 samples_in_u8
 */
-fn as_i16_slice(slice_u8: &[u8]) -> Vec<i16> {
+fn samples_as_i16(slice_u8: &[u8]) -> Vec<i16> {
     let mut temp: [u8; 2] = [0, 0];
     let mut counter = 0;
     let mut sample: i16;
@@ -235,7 +239,7 @@ fn as_i16_slice(slice_u8: &[u8]) -> Vec<i16> {
     slice_i16
 }
 
-fn as_u8_slice(slice_i16: &[i16]) -> Vec<u8> {
+fn samples_as_u8(slice_i16: &[i16]) -> Vec<u8> {
     let mut slice_u8: Vec<u8> = Vec::new();
 
     for sample in slice_i16.iter() {
