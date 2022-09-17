@@ -136,7 +136,7 @@ impl<'a> Wave<'a> {
         }
         println!("Printing from buffer:\n");
     
-        let buf_as_u8 = _as_u8_slice(&buf);
+        let buf_as_u8 = as_u8_slice(&buf);
         // for (i, byte) in buf_as_u8.iter().enumerate() {
         //     println!("Byte #{}: {:x}", i, byte);
         // }
@@ -235,7 +235,7 @@ fn as_i16_slice(slice_u8: &[u8]) -> Vec<i16> {
     slice_i16
 }
 
-fn _as_u8_slice(slice_i16: &[i16]) -> Vec<u8> {
+fn as_u8_slice(slice_i16: &[i16]) -> Vec<u8> {
     let mut slice_u8: Vec<u8> = Vec::new();
 
     for sample in slice_i16.iter() {
@@ -245,13 +245,4 @@ fn _as_u8_slice(slice_i16: &[i16]) -> Vec<u8> {
         }
     }
     slice_u8
-}
-
-fn as_u8_slice(slice_i16: &[i16]) -> &[u8] {
-    unsafe {
-        std::slice::from_raw_parts(
-            slice_i16.as_ptr() as *const u8, 
-            slice_i16.len() * std::mem::size_of::<u16>(),
-        )
-    }
 }
