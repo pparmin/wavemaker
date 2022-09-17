@@ -2,7 +2,6 @@ use std::{fs::File, str::FromStr};
 use std::fs::OpenOptions;
 use std::io::prelude::*;
 use std::path::Path;
-use std::io::BufReader;
 
 use serde::{Serialize};
 use mp4::FourCC;
@@ -134,6 +133,7 @@ impl<'a> Wave<'a> {
         for i in 0 .. self.config.nsamples {
             let sample = SAMPLE_MAX as f64 * amplitude * (2.0 * M_PI * frequency * i as f64/self.config.sample_rate as f64).sin();
             buf.push(sample as i16);
+            //println!("SAMPLE as FLOAT: {} - SAMPLE AS i16: {}", sample, sample as i16)
         }
         println!("Printing from buffer:\n");
     
@@ -160,15 +160,16 @@ impl<'a> Wave<'a> {
                 println!("Successfully read file \"{}\"", p);
                 n
             },
-            Err(e) => panic!("the data could not be read into the buffer: {}", e)
+            Err(why) => panic!("the data could not be read into the buffer: {}", why)
         };
-
         println!("Length of buffer: {}", n);
 
-        for v in buf.iter() {
-            println!("Value: {}", *v as char);
-        }
+        let buf_as_i16 = as_i16_slice(&buf);
         
+        println!("DATA SECTION");
+        for sample in buf_as_i16 {
+        println!("SAMPLE VALUE as hex {:x} - dec {}", sample, sample);
+        }
     }
 }
 
@@ -193,6 +194,36 @@ impl Config {
             nsamples: channels as u32 * duration * sample_rate
         }
     }
+}
+
+fn as_i16_slice(slice_u8: &[u8]) -> Vec<i16> {
+    let mut temp: [u8; 2] = [0, 0];
+    let mut counter = 0;
+    let mut sample: i16;
+
+    let mut slice_i16: Vec<i16> = vec![];
+
+    for (i, v) in slice_u8.iter().enumerate() {
+        let byte = i+1;
+        //println!("Byte #{} - value (char): {} - value (hex): {:x}  value (float): {}", i+1, *v as char, *v, *v as f64);        
+        /* IMPORTANT 
+         * Checking hexedit reveals that the actual sample data only begins by byte 65:
+         */
+        if byte > 64 {
+            if counter == 0 {
+                temp[0] = *v;
+                counter += 1;
+
+            } else if counter == 1 {
+                temp[1] = *v; 
+                sample = i16::from_le_bytes(temp); 
+                counter = 0;
+                temp = [0, 0];
+                slice_i16.push(sample);
+            } 
+        }
+    }
+    slice_i16
 }
 
 fn as_u8_slice(slice_i16: &[i16]) -> &[u8] {
