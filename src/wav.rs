@@ -133,17 +133,19 @@ impl<'a> Wave<'a> {
         for i in 0 .. self.config.nsamples {
             let sample = SAMPLE_MAX as f64 * amplitude * (2.0 * M_PI * frequency * i as f64/self.config.sample_rate as f64).sin();
             buf.push(sample as i16);
-            //println!("SAMPLE as FLOAT: {} - SAMPLE AS i16: {}", sample, sample as i16)
         }
         println!("Printing from buffer:\n");
     
-        let buf_as_u8 = as_u8_slice(&buf);
+        let buf_as_u8 = _as_u8_slice(&buf);
+        // for (i, byte) in buf_as_u8.iter().enumerate() {
+        //     println!("Byte #{}: {:x}", i, byte);
+        // }
         let mut file = OpenOptions::new().
         append(true).
         open(p).
         unwrap(); 
     
-        match file.write_all(buf_as_u8) {
+        match file.write_all(&buf_as_u8) {
             Err(why) => panic!("couldn't write sample data to {}: {}", p, why),
             Ok(_) => println!("successfully appended sample data to {}", p),
         }
@@ -196,6 +198,14 @@ impl Config {
     }
 }
 
+/* 
+ * We have to convert our sample data, which is i16, to u8 when writing a .wav
+ * and back to i16 from u8 when reading a .wav. The following two functions take
+ * care of this. 
+ * 
+ * FUTURE REFACTOR: 
+ * Rename as_i6_slice to samples_in_i6 & as_u8_slice samples_in_u8
+*/
 fn as_i16_slice(slice_u8: &[u8]) -> Vec<i16> {
     let mut temp: [u8; 2] = [0, 0];
     let mut counter = 0;
@@ -205,11 +215,10 @@ fn as_i16_slice(slice_u8: &[u8]) -> Vec<i16> {
 
     for (i, v) in slice_u8.iter().enumerate() {
         let byte = i+1;
-        //println!("Byte #{} - value (char): {} - value (hex): {:x}  value (float): {}", i+1, *v as char, *v, *v as f64);        
         /* IMPORTANT 
-         * Checking hexedit reveals that the actual sample data only begins by byte 65:
+         * Checking hexedit reveals that the actual sample data begins by byte 63:
          */
-        if byte > 64 {
+        if byte > 62 {
             if counter == 0 {
                 temp[0] = *v;
                 counter += 1;
@@ -224,6 +233,18 @@ fn as_i16_slice(slice_u8: &[u8]) -> Vec<i16> {
         }
     }
     slice_i16
+}
+
+fn _as_u8_slice(slice_i16: &[i16]) -> Vec<u8> {
+    let mut slice_u8: Vec<u8> = Vec::new();
+
+    for sample in slice_i16.iter() {
+        let sample_bytes = sample.to_le_bytes();
+        for b in sample_bytes {
+            slice_u8.push(b);
+        }
+    }
+    slice_u8
 }
 
 fn as_u8_slice(slice_i16: &[i16]) -> &[u8] {
