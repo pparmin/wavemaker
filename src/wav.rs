@@ -220,9 +220,6 @@ impl<'a> Wave<'a> {
         println!("Printing from buffer:\n");
     
         let buf_as_u8 = samples_as_u8(&buf);
-        // for (i, byte) in buf_as_u8.iter().enumerate() {
-        //     println!("Byte #{}: {:x}", i, byte);
-        // }
         let mut file = OpenOptions::new().
         append(true).
         open(p).
@@ -233,6 +230,23 @@ impl<'a> Wave<'a> {
             Ok(_) => println!("successfully appended sample data to {}", p),
         }
     }
+
+    pub fn read(&self, p: &str) {
+        let mut buf = Vec::new();
+        let mut file = File::open(p).unwrap();
+
+        let n = match file.read_to_end(&mut buf) {
+            Ok(n) => {
+                println!("Successfully read file \"{}\"", p);
+                n
+            },
+            Err(why) => panic!("the data could not be read into the buffer: {}", why)
+        };
+        
+        let (header_data, sample_data) = buf.split_at_mut(44);
+    }
+
+
 
     pub fn read_header(&self, p: &str) -> [u8; 62] {
         const BYTES_HEADER: usize = 62;
@@ -305,9 +319,6 @@ impl Config {
  * We have to convert our sample data, which is i16, to u8 when writing a .wav
  * and back to i16 from u8 when reading a .wav. The following two functions take
  * care of this. 
- * 
- * FUTURE REFACTOR: 
- * Rename as_i6_slice to samples_in_i16 & samples_as_u8 samples_in_u8
 */
 fn samples_as_i16(slice_u8: &[u8]) -> Vec<i16> {
     let mut temp: [u8; 2] = [0, 0];
