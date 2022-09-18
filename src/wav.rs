@@ -1,3 +1,6 @@
+#![allow(unused_variables)]
+#![allow(dead_code)]
+
 use std::{fs::File, str::FromStr};
 use std::fs::OpenOptions;
 use std::io::prelude::*;
@@ -24,6 +27,10 @@ impl RiffHeader {
             size: 36 + nsamples * sample_size as u32,
             ftype: FourCC::from_str("WAVE").unwrap(),
         }
+    }
+
+    fn from_bytes(buf: &[u8]) -> Self {
+        todo!()
     }
 }
 
@@ -59,6 +66,10 @@ impl FmtChunk {
             bits_per_sample,
         }
     }
+
+    fn from_bytes(buf: &[u8]) -> Self {
+        todo!()
+    }
 }
 
 #[derive(Serialize, PartialEq, Debug)]
@@ -73,6 +84,10 @@ impl DataHeader {
             id: FourCC::from_str("data").unwrap(),
             size: nsamples * sample_size as u32,
         }
+    }
+
+    fn from_bytes(buf: &[u8]) -> Self {
+        todo!()
     }
 }
 
@@ -89,6 +104,14 @@ impl WavHeader {
             riff_header: RiffHeader::new(config.nsamples, config.sample_size),
             fmt_chunk: FmtChunk::new(config.sample_rate, config.channels, config.sample_size, config.bits_per_sample),
             data_header: DataHeader::new(config.nsamples, config.sample_size),
+        }
+    }
+
+    fn from_bytes(buf: [u8; 44]) -> Self {
+        WavHeader {
+            riff_header: RiffHeader::from_bytes(&buf[0 .. 11]),
+            fmt_chunk: FmtChunk::from_bytes(&buf[12 .. 35]),
+            data_header: DataHeader::from_bytes(&buf[36 .. 43]),
         }
     }
 }
@@ -121,6 +144,11 @@ impl<'a> Wave<'a> {
 		// this actually works with write_all(&[u8]) because Vec<T> implements 
 		// AsRef<[T]>, so &Vec<T> can be coerced into &[T]
         let encoded: Vec<u8> = bincode::serialize(&self).unwrap();
+
+        println!("printing from encoded header");
+        for (i, b) in encoded.iter().enumerate() {
+            println!("Byte #{}: {:x}", i, b);
+        }
         match file.write_all(&encoded) {
             Err(why) => panic!("couldn't write to {}: {}", display, why),
             Ok(_) => println!("successfully wrote to {}", display),
@@ -149,6 +177,22 @@ impl<'a> Wave<'a> {
             Err(why) => panic!("couldn't write sample data to {}: {}", p, why),
             Ok(_) => println!("successfully appended sample data to {}", p),
         }
+    }
+
+    pub fn read_header(&self, p: &str) -> [u8; 62] {
+        const BYTES_HEADER: usize = 62;
+        let mut header_data: [u8; BYTES_HEADER] = [0; BYTES_HEADER];
+        let mut file = File::open(p).unwrap();
+
+        match file.read_exact(&mut header_data) {
+            Err(why) => panic!("couldn't read wav header data into buffer: {}", why), 
+            Ok(_) => {}
+        };
+
+        for (i, b) in header_data.iter().enumerate() {
+            println!("Byte #{}: {:x} as char {}", i+1, b, char::from(*b));
+        }
+        header_data
     }
 
     /* 

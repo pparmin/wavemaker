@@ -19,9 +19,10 @@ fn main() {
     };
 
     let wav_file = Wave::new(&config);    
-    wav_file.write_header("output-2.wav");    
+    wav_file.write_header("output.wav");    
 
     let frequency = 220.0;
-    wav_file.write_data("output-2.wav", frequency);
-    wav_file.read_data("output.wav");
+    wav_file.write_data("output.wav", frequency);
+    //wav_file.read_data("output.wav");
+    wav_file.read_header("output.wav");
 }
