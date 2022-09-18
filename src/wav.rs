@@ -30,7 +30,20 @@ impl RiffHeader {
     }
 
     fn from_bytes(buf: &[u8]) -> Self {
-        todo!()
+        let riff_id = std::str::from_utf8(&buf[0 .. 4])
+            .expect("Error while converting from bytes to string");
+        
+        let buf_as_array = <&[u8; 4]>::try_from(&buf[4 .. 8]).expect("Error converting from slice to array");
+        let size = u32::from_le_bytes(*buf_as_array);
+
+        let riff_ftype = std::str::from_utf8(&buf[8..])
+        .expect("Error while converting from bytes to string");
+        
+        RiffHeader{ 
+            id: FourCC::from_str(riff_id).unwrap(),
+            size, 
+            ftype: FourCC::from_str(riff_ftype).unwrap()
+        }
     }
 }
 
@@ -68,7 +81,40 @@ impl FmtChunk {
     }
 
     fn from_bytes(buf: &[u8]) -> Self {
-        todo!()
+        let fmt_id = std::str::from_utf8(&buf[0 .. 4])
+            .expect("Error while converting from bytes to string");
+
+        let buf_as_array = <&[u8; 4]>::try_from(&buf[4 .. 8]).expect("Error converting from slice to array");
+        let size = u32::from_le_bytes(*buf_as_array);
+
+        let buf_as_array = <&[u8; 2]>::try_from(&buf[8 .. 10]).expect("Error converting from slice to array");
+        let fmt_tag = u16::from_le_bytes(*buf_as_array);
+        
+        let buf_as_array = <&[u8; 2]>::try_from(&buf[10 .. 12]).expect("Error converting from slice to array");
+        let channels = u16::from_le_bytes(*buf_as_array);
+
+        let buf_as_array = <&[u8; 4]>::try_from(&buf[12 .. 16]).expect("Error converting from slice to array");
+        let samples_per_sec = u32::from_le_bytes(*buf_as_array);
+
+        let buf_as_array = <&[u8; 4]>::try_from(&buf[16 .. 20]).expect("Error converting from slice to array");
+        let bytes_per_sec = u32::from_le_bytes(*buf_as_array);
+
+        let buf_as_array = <&[u8; 2]>::try_from(&buf[20 .. 22]).expect("Error converting from slice to array");
+        let block_align = u16::from_le_bytes(*buf_as_array);
+
+        let buf_as_array = <&[u8; 2]>::try_from(&buf[22..]).expect("Error converting from slice to array");
+        let bits_per_sample = u16::from_le_bytes(*buf_as_array);
+
+        FmtChunk {
+            id: FourCC::from_str(fmt_id).unwrap(),
+            size, 
+            fmt_tag,
+            channels,
+            samples_per_sec,
+            bytes_per_sec,
+            block_align,
+            bits_per_sample
+        }
     }
 }
 
@@ -87,7 +133,16 @@ impl DataHeader {
     }
 
     fn from_bytes(buf: &[u8]) -> Self {
-        todo!()
+        let data_id = std::str::from_utf8(&buf[0 .. 4])
+        .expect("Error while converting from bytes to string");
+
+        let buf_as_array = <&[u8; 4]>::try_from(&buf[4..]).expect("Error converting from slice to array");
+        let size = u32::from_le_bytes(*buf_as_array);
+
+        DataHeader {
+            id: FourCC::from_str(data_id).unwrap(),
+            size
+        }
     }
 }
 
@@ -145,10 +200,10 @@ impl<'a> Wave<'a> {
 		// AsRef<[T]>, so &Vec<T> can be coerced into &[T]
         let encoded: Vec<u8> = bincode::serialize(&self).unwrap();
 
-        println!("printing from encoded header");
-        for (i, b) in encoded.iter().enumerate() {
-            println!("Byte #{}: {:x}", i, b);
-        }
+        // println!("printing from encoded header");
+        // for (i, b) in encoded.iter().enumerate() {
+        //     println!("Byte #{}: {:x}", i, b);
+        // }
         match file.write_all(&encoded) {
             Err(why) => panic!("couldn't write to {}: {}", display, why),
             Ok(_) => println!("successfully wrote to {}", display),
