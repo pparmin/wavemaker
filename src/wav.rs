@@ -38,11 +38,10 @@ impl RiffHeader {
 
         let riff_ftype = std::str::from_utf8(&buf[8..])
         .expect("Error while converting from bytes to string");
-        
         RiffHeader{ 
-            id: FourCC::from_str(riff_id).unwrap(),
+            id: FourCC::from_str(riff_id).expect("Error while converting to RiffHeader.\"id\" FourCC"),
             size, 
-            ftype: FourCC::from_str(riff_ftype).unwrap()
+            ftype: FourCC::from_str(riff_ftype).expect("Error while converting to RiffHeader.\"ftype\" FourCC"),
         }
     }
 }
@@ -69,7 +68,7 @@ struct FmtChunk {
 impl FmtChunk {
     fn new(sample_rate: u32, nchannels: u16, sample_size: u16, bits_per_sample: u16) -> Self {
         FmtChunk {
-            id: FourCC::from_str("fmt ").unwrap(),
+            id: FourCC::from_str("fmt ").expect("Error while converting to FmtChunk.\"id\" FourCC"),
             size: 16,
             fmt_tag: 1,
             channels: nchannels,
@@ -119,15 +118,15 @@ impl FmtChunk {
 }
 
 #[derive(Serialize, PartialEq, Debug)]
-struct DataHeader {
+struct DataChunk {
     id: FourCC,
     size: u32,
 }
 
-impl DataHeader {
+impl DataChunk {
     fn new(nsamples: u32, sample_size: u16) -> Self {
-        DataHeader {
-            id: FourCC::from_str("data").unwrap(),
+        DataChunk {
+            id: FourCC::from_str("data").expect("Error while converting to DataChunk.\"id\" FourCC"),
             size: nsamples * sample_size as u32,
         }
     }
@@ -139,7 +138,7 @@ impl DataHeader {
         let buf_as_array = <&[u8; 4]>::try_from(&buf[4..]).expect("Error converting from slice to array");
         let size = u32::from_le_bytes(*buf_as_array);
 
-        DataHeader {
+        DataChunk {
             id: FourCC::from_str(data_id).unwrap(),
             size
         }
@@ -150,7 +149,7 @@ impl DataHeader {
 struct WavHeader {
     riff_header: RiffHeader,
     fmt_chunk: FmtChunk,
-    data_header: DataHeader,
+    data_header: DataChunk,
 }
 
 impl WavHeader {
@@ -158,15 +157,15 @@ impl WavHeader {
         WavHeader {
             riff_header: RiffHeader::new(config.nsamples, config.sample_size),
             fmt_chunk: FmtChunk::new(config.sample_rate, config.channels, config.sample_size, config.bits_per_sample),
-            data_header: DataHeader::new(config.nsamples, config.sample_size),
+            data_header: DataChunk::new(config.nsamples, config.sample_size),
         }
     }
 
-    fn from_bytes(buf: [u8; 44]) -> Self {
+    fn from_bytes(buf: &[u8]) -> Self {
         WavHeader {
-            riff_header: RiffHeader::from_bytes(&buf[0 .. 11]),
-            fmt_chunk: FmtChunk::from_bytes(&buf[12 .. 35]),
-            data_header: DataHeader::from_bytes(&buf[36 .. 43]),
+            riff_header: RiffHeader::from_bytes(&buf[0 .. 12]),
+            fmt_chunk: FmtChunk::from_bytes(&buf[12 .. 36]),
+            data_header: DataChunk::from_bytes(&buf[36..]),
         }
     }
 }
@@ -175,8 +174,8 @@ impl WavHeader {
 #[derive(Serialize, PartialEq, Debug)]
 pub struct Wave<'a> {
     header: WavHeader,
-    config: &'a Config,
-    data: Vec<u8>,
+    pub config: &'a Config,
+    pub data: Vec<u8>,
 }
 
 impl<'a> Wave<'a> {
@@ -188,7 +187,7 @@ impl<'a> Wave<'a> {
         }
     }
 
-    pub fn write(&mut self, path: &str, frequency: f64, amplitude: f64) {
+    pub fn write_sine(&mut self, path: &str, frequency: f64, amplitude: f64) {
         let p = Path::new(path);
         let display = p.display();
 
@@ -223,10 +222,10 @@ impl<'a> Wave<'a> {
             let sample = SAMPLE_MAX as f64 * amplitude * (2.0 * M_PI * frequency * i as f64/self.config.sample_rate as f64).sin();
             buf.push(sample as i16);
         }
-        println!("Printing from buffer:\n");
-        for (i, b) in buf.iter().enumerate() {
-            println!("Byte n#{}: {:x} as val {}", i+1, b, b);
-        }
+        // println!("Printing from buffer:\n");
+        // for (i, b) in buf.iter().enumerate() {
+        //     println!("Byte n#{}: {:x} as val {}", i+1, b, b);
+        // }
 
 
         self.data = samples_as_u8(&buf);
@@ -236,66 +235,63 @@ impl<'a> Wave<'a> {
         }
     }
 
-    pub fn read(&self, p: &str) {
-        let mut buf = Vec::new();
-        let mut file = File::open(p).unwrap();
-
-        let n = match file.read_to_end(&mut buf) {
-            Ok(n) => {
-                println!("Successfully read file \"{}\"", p);
-                n
-            },
-            Err(why) => panic!("the data could not be read into the buffer: {}", why)
-        };
-        
-        let (header_data, sample_data) = buf.split_at_mut(44);
-    }
-
-
-
     pub fn read_header(&self, p: &str) -> [u8; 62] {
         const BYTES_HEADER: usize = 62;
         let mut header_data: [u8; BYTES_HEADER] = [0; BYTES_HEADER];
         let mut file = File::open(p).unwrap();
-
+    
         match file.read_exact(&mut header_data) {
             Err(why) => panic!("couldn't read wav header data into buffer: {}", why), 
             Ok(_) => {}
         };
-
+    
+        println!("Printing header data");
         for (i, b) in header_data.iter().enumerate() {
             println!("Byte #{}: {:x} as char {}", i+1, b, char::from(*b));
         }
         header_data
     }
-
-    /* 
-     * Read data currently only reads the sample data into a buffer 
-     * The header data is currently not extracted 
-     */
-    pub fn read_data(&self, p: &str) {
-        // 1. extract metadata from header 
-        // 2. write data to buffer
-        let mut buf = Vec::new();
-        let mut file = File::open(p).unwrap();
-
-        let n = match file.read_to_end(&mut buf) {
-            Ok(n) => {
-                println!("Successfully read file \"{}\"", p);
-                n
-            },
-            Err(why) => panic!("the data could not be read into the buffer: {}", why)
-        };
-        println!("Length of buffer: {}", n);
-
-        let buf_as_i16 = samples_as_i16(&buf);
+    
+    pub fn read_data(&self) {
+        // let mut buf = Vec::new();
+        // let mut file = File::open(p).unwrap();
+    
+        // let n = match file.read_to_end(&mut buf) {
+        //     Ok(n) => {
+        //         println!("Successfully read file \"{}\"", p);
+        //         n
+        //     },
+        //     Err(why) => panic!("the data could not be read into the buffer: {}", why)
+        // };
+        let buf_as_i16 = samples_as_i16(&self.data);
         
-        println!("DATA SECTION");
+        println!("Printing sample data");
         for sample in buf_as_i16 {
-        println!("SAMPLE VALUE as hex {:x} - dec {}", sample, sample);
+            println!("SAMPLE VALUE as hex {:x} - dec {}", sample, sample);
         }
     }
 }
+
+pub fn read<'a>(p: &str, config: &'a Config) -> Wave<'a> {
+    let mut buf = Vec::new();
+    let mut file = File::open(p).unwrap();
+
+    let n = match file.read_to_end(&mut buf) {
+        Ok(n) => {
+            println!("Successfully read file \"{}\"", p);
+            n
+        },
+        Err(why) => panic!("the data could not be read into the buffer: {}", why)
+    };
+    
+    let (header_data, sample_data) = buf.split_at(44);
+    Wave {
+        header: WavHeader::from_bytes(header_data),
+        data: sample_data.to_vec(),
+        config
+    }
+}
+
 
 #[derive(Serialize, PartialEq, Debug)]
 pub struct Config {
@@ -334,18 +330,15 @@ fn samples_as_i16(slice_u8: &[u8]) -> Vec<i16> {
 
     for (i, v) in slice_u8.iter().enumerate() {
         let byte = i+1;
-        if byte > 62 {
-            if counter == 0 {
-                temp[0] = *v;
-                counter += 1;
-
-            } else if counter == 1 {
-                temp[1] = *v; 
-                sample = i16::from_le_bytes(temp); 
-                counter = 0;
-                temp = [0, 0];
-                slice_i16.push(sample);
-            } 
+        if counter == 0 {
+            temp[0] = *v;
+            counter += 1;
+        } else if counter == 1 {
+            temp[1] = *v; 
+            sample = i16::from_le_bytes(temp); 
+            counter = 0;
+            temp = [0, 0];
+            slice_i16.push(sample);
         }
     }
     slice_i16
