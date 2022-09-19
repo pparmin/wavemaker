@@ -222,11 +222,6 @@ impl<'a> Wave<'a> {
             let sample = SAMPLE_MAX as f64 * amplitude * (2.0 * M_PI * frequency * i as f64/self.config.sample_rate as f64).sin();
             buf.push(sample as i16);
         }
-        // println!("Printing from buffer:\n");
-        // for (i, b) in buf.iter().enumerate() {
-        //     println!("Byte n#{}: {:x} as val {}", i+1, b, b);
-        // }
-
 
         self.data = samples_as_u8(&buf);
         match file.write_all(&self.data) {
@@ -253,16 +248,6 @@ impl<'a> Wave<'a> {
     }
     
     pub fn read_data(&self) {
-        // let mut buf = Vec::new();
-        // let mut file = File::open(p).unwrap();
-    
-        // let n = match file.read_to_end(&mut buf) {
-        //     Ok(n) => {
-        //         println!("Successfully read file \"{}\"", p);
-        //         n
-        //     },
-        //     Err(why) => panic!("the data could not be read into the buffer: {}", why)
-        // };
         let buf_as_i16 = samples_as_i16(&self.data);
         
         println!("Printing sample data");
