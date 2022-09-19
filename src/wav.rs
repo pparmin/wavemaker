@@ -176,58 +176,63 @@ impl WavHeader {
 pub struct Wave<'a> {
     header: WavHeader,
     config: &'a Config,
+    data: Vec<u8>,
 }
 
 impl<'a> Wave<'a> {
     pub fn new(config: &'a Config) -> Self {
         Wave { 
-            header: WavHeader::new(config),
-            config,
+            header: WavHeader::new(config),        
+            data: Vec::new(),
+            config
         }
     }
 
-    pub fn write_header(&self, p: &str) {
-        let path = Path::new(p);
-        let display = path.display();
+    pub fn write(&mut self, path: &str, frequency: f64, amplitude: f64) {
+        let p = Path::new(path);
+        let display = p.display();
 
-        let mut file = match File::create(&path) {
+        let options = OpenOptions::new()
+        .read(true)
+        .write(true)
+        .create(true)
+        .append(true)
+        .open(path);
+
+        let mut file = match options {
             Err(why) => panic!("couldn't create {}. Error: {}", display, why),
             Ok(file) => file,
-        };
+        }; 
 
-        // We have to serialize the struct's data and turn it into a Vec<u8>
-		// this actually works with write_all(&[u8]) because Vec<T> implements 
-		// AsRef<[T]>, so &Vec<T> can be coerced into &[T]
-        let encoded: Vec<u8> = bincode::serialize(&self).unwrap();
+        let header_data: Vec<u8> = bincode::serialize(&self.header).unwrap();
+        self.write_header(&mut file, &header_data);
+        self.write_data(&mut file, frequency, amplitude);
+        
+    } 
 
-        // println!("printing from encoded header");
-        // for (i, b) in encoded.iter().enumerate() {
-        //     println!("Byte #{}: {:x}", i, b);
-        // }
-        match file.write_all(&encoded) {
-            Err(why) => panic!("couldn't write to {}: {}", display, why),
-            Ok(_) => println!("successfully wrote to {}", display),
+    fn write_header(&self, file: &mut File, header_data: &[u8]) {
+        match file.write_all(&header_data) {
+            Err(why) => panic!("couldn't write header data to file: {}", why),
+            Ok(_) => println!("successfully wrote header data to .wav file"),
         }
     }
 
-    pub fn write_data(&self, p: &str, frequency: f64) {
-        let mut buf = Vec::new();
-        let amplitude = 0.2;
+    fn write_data(&mut self, file: &mut File, frequency: f64, amplitude: f64) {
+        let mut buf: Vec<i16> = Vec::new();
         for i in 0 .. self.config.nsamples {
             let sample = SAMPLE_MAX as f64 * amplitude * (2.0 * M_PI * frequency * i as f64/self.config.sample_rate as f64).sin();
             buf.push(sample as i16);
         }
         println!("Printing from buffer:\n");
-    
-        let buf_as_u8 = samples_as_u8(&buf);
-        let mut file = OpenOptions::new().
-        append(true).
-        open(p).
-        unwrap(); 
-    
-        match file.write_all(&buf_as_u8) {
-            Err(why) => panic!("couldn't write sample data to {}: {}", p, why),
-            Ok(_) => println!("successfully appended sample data to {}", p),
+        for (i, b) in buf.iter().enumerate() {
+            println!("Byte n#{}: {:x} as val {}", i+1, b, b);
+        }
+
+
+        self.data = samples_as_u8(&buf);
+        match file.write_all(&self.data) {
+            Err(why) => panic!("couldn't write header data to file: {}", why),
+            Ok(_) => println!("successfully wrote header data to .wav file"),
         }
     }
 
@@ -329,9 +334,6 @@ fn samples_as_i16(slice_u8: &[u8]) -> Vec<i16> {
 
     for (i, v) in slice_u8.iter().enumerate() {
         let byte = i+1;
-        /* IMPORTANT 
-         * Checking hexedit reveals that the actual sample data begins by byte 63:
-         */
         if byte > 62 {
             if counter == 0 {
                 temp[0] = *v;
@@ -360,3 +362,4 @@ fn samples_as_u8(slice_i16: &[i16]) -> Vec<u8> {
     }
     slice_u8
 }
+
