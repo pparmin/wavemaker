@@ -26,7 +26,7 @@ For more information, refer to the explination in [chapter 2: osc (part 1)](http
 Creating a .wav file can be achieved in just a few lines of code: 
 
 ```rust
-// Let's first define the required metadata which will go into the header of our WAV file 
+    // Let's first define the required metadata which will go into the header of our WAV file 
     let config = Config {
         sample_size: SAMPLE_SIZE,
         channels: NCHANNELS,
