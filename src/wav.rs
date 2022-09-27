@@ -23,9 +23,9 @@ struct RiffHeader {
 impl RiffHeader {
     fn new(nsamples: u32, sample_size: u16) -> Self {
         RiffHeader {
-            id: FourCC::from_str("RIFF").unwrap(),
+            id: FourCC::from_str("RIFF").expect("Error while converting to RiffHeader.\"id\" FourCC"),
             size: 36 + nsamples * sample_size as u32,
-            ftype: FourCC::from_str("WAVE").unwrap(),
+            ftype: FourCC::from_str("WAVE").expect("Error while converting to RiffHeader.\"ftype\" FourCC"),
         }
     }
 
@@ -105,7 +105,7 @@ impl FmtChunk {
         let bits_per_sample = u16::from_le_bytes(*buf_as_array);
 
         FmtChunk {
-            id: FourCC::from_str(fmt_id).unwrap(),
+            id: FourCC::from_str(fmt_id).expect("Error while converting to FmtChunk.\"id\" FourCC"),
             size, 
             fmt_tag,
             channels,
@@ -139,7 +139,7 @@ impl DataChunk {
         let size = u32::from_le_bytes(*buf_as_array);
 
         DataChunk {
-            id: FourCC::from_str(data_id).unwrap(),
+            id: FourCC::from_str(data_id).expect("Error while converting to DataChunk.\"id\" FourCC"),
             size
         }
     }
@@ -203,7 +203,7 @@ impl<'a> Wave<'a> {
             Ok(file) => file,
         }; 
 
-        let header_data: Vec<u8> = bincode::serialize(&self.header).unwrap();
+        let header_data: Vec<u8> = bincode::serialize(&self.header).expect("Error while serializing header data to u8 vector");
         self.write_header(&mut file, &header_data);
         self.write_data(&mut file, frequency, amplitude);
         
@@ -233,7 +233,7 @@ impl<'a> Wave<'a> {
     pub fn read_header(&self, p: &str) -> [u8; 62] {
         const BYTES_HEADER: usize = 62;
         let mut header_data: [u8; BYTES_HEADER] = [0; BYTES_HEADER];
-        let mut file = File::open(p).unwrap();
+        let mut file = File::open(p).expect("Error while attempting to open file");
     
         match file.read_exact(&mut header_data) {
             Err(why) => panic!("couldn't read wav header data into buffer: {}", why), 
@@ -259,7 +259,7 @@ impl<'a> Wave<'a> {
 
 pub fn read<'a>(p: &str, config: &'a Config) -> Wave<'a> {
     let mut buf = Vec::new();
-    let mut file = File::open(p).unwrap();
+    let mut file = File::open(p).expect("Error while attempting to open file");
 
     let n = match file.read_to_end(&mut buf) {
         Ok(n) => {
