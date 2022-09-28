@@ -255,6 +255,24 @@ impl<'a> Wave<'a> {
             println!("SAMPLE VALUE as hex {:x} - dec {}", sample, sample);
         }
     }
+
+    // This function allows us to define the subset of sample data which we want to read by adding a time parameter in ms. 
+    pub fn read_data_until(&self, time: u32) {
+        let buf_as_i16 = samples_as_i16(&self.data);
+
+        let time_in_ms: f64 = time as f64 / 1000.0; 
+        println!("time in ms: {}", time_in_ms);
+        let sample_limit = (self.config.sample_rate as f64 * time_in_ms) as u32; 
+
+        println!("Sample limit: {}", sample_limit); 
+        for (i, sample) in buf_as_i16.iter().enumerate() {
+            if i > sample_limit.try_into().unwrap() {
+                println!("time limit reached: sample #{}", i);
+                return
+            }
+            println!("SAMPLE VALUE as hex {:x} - dec {}", sample, sample);
+        } 
+    }
 }
 
 pub fn read<'a>(p: &str, config: &'a Config) -> Wave<'a> {

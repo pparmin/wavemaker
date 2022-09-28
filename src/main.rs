@@ -31,8 +31,12 @@ fn main() {
     // NOTE: At this point this also requires us to pass in a config which we define ourselves. 
     // Removing this necessity is a task for a future refactor
     let _wav = read("sine.wav", &config); 
-    
+
     // We can now read the associated sample data directly from the struct field
     wav.read_data();
+
+    // We can additionally read only a subset of the sample data by specifying a time limit in ms
+    let time = 50;
+    wav.read_data_until(time);
 }
 
