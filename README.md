@@ -57,6 +57,13 @@ We can also read the sample data and create a WAVE file struct from it. This all
     wav.read_data();
 ```
 
+### Reading part of a .wav file into memory
+We can additionally read only a subset of the sample data by specifying a time limit in ms after which the program should stop reading the sample data. 
+```rust
+    let time = 50;
+    wav.read_data_until_ms(time);
+```
+
 ### Building an executable
 We can easily build an executable using `cargo`: 
 
