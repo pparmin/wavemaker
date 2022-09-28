@@ -37,6 +37,6 @@ fn main() {
 
     // We can additionally read only a subset of the sample data by specifying a time limit in ms
     let time = 50;
-    wav.read_data_until(time);
+    wav.read_data_until_ms(time);
 }
 

@@ -257,7 +257,7 @@ impl<'a> Wave<'a> {
     }
 
     // This function allows us to define the subset of sample data which we want to read by adding a time parameter in ms. 
-    pub fn read_data_until(&self, time: u32) {
+    pub fn read_data_until_ms(&self, time: u32) {
         let buf_as_i16 = samples_as_i16(&self.data);
 
         let time_in_ms: f64 = time as f64 / 1000.0; 
