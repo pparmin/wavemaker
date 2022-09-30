@@ -1,4 +1,5 @@
 use wavemaker::wav::*;
+use clap::{Parser, Subcommand, Args};
 
 type Sample = i16;
 const SAMPLE_SIZE: u16 = std::mem::size_of::<Sample>() as u16;
@@ -8,7 +9,50 @@ const SR: u32 = 44100;
 const NCHANNELS: u16 = 1;
 const NSAMPLES: u32 = NCHANNELS as u32 * DURATION * SR;
 
+#[derive(Subcommand, Debug)]
+enum Commands {
+    /// Reads a WAV file into buffer  
+    Read(Read),
+    /// Writes a sine wave to a WAV file 
+    WriteSine(WriteSine)
+}
+
+#[derive(Args, Debug)]
+struct Read {
+    /// Path to WAV file to be read into buffer
+    #[arg(short = 'p', long = "path")]
+    path: String
+}
+
+#[derive(Args, Debug)]
+struct WriteSine {
+    /// Frequency of sine wave
+    #[arg(short = 'f', long = "freq")]
+    frequency: f64,
+
+    /// Amplitude of sine wave
+    #[arg(short = 'a', long = "ampl")]
+    amplitude: f64
+}
+
+
+
+/// CLI arguments for reading and writing WAV files
+#[derive(Parser, Debug)]
+#[command(name = "Wavemaker")]
+#[command(author = "Philipp Armingeon <philipp.armingeon@googlemail.com>")]
+#[command(version = "1.0")]
+#[command(about = "CLI version of Wavemaker")]
+struct Cli {
+    #[command(subcommand)]
+    command: Commands,
+}
+
+
 fn main() {
+    let cli = Cli::parse();
+    println!("commands: {:?}", cli.command);
+
     // Let's first define the required metadata which will go into the header of our WAV file 
     let config = Config {
         sample_size: SAMPLE_SIZE,
