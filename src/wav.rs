@@ -250,6 +250,7 @@ impl<'a> Wave<'a> {
     pub fn read_data(&self) {
         let buf_as_i16 = samples_as_i16(&self.data);
         
+        println!("size of data vector: {:?}", buf_as_i16.len());
         println!("Printing sample data");
         for sample in buf_as_i16 {
             println!("SAMPLE VALUE as hex {:x} - dec {}", sample, sample);
@@ -261,7 +262,7 @@ impl<'a> Wave<'a> {
         let buf_as_i16 = samples_as_i16(&self.data);
 
         let time_in_ms: f64 = time as f64 / 1000.0; 
-        println!("time in ms: {}", time_in_ms);
+        println!("time in s: {}", time_in_ms);
         let sample_limit = (self.config.sample_rate as f64 * time_in_ms) as u32; 
 
         println!("Sample limit: {}", sample_limit); 
