@@ -251,9 +251,9 @@ impl<'a> Wave<'a> {
         let buf_as_i16 = samples_as_i16(&self.data);
         
         println!("size of data vector: {:?}", buf_as_i16.len());
-        println!("Printing sample data");
+        //println!("Printing sample data");
         for sample in buf_as_i16 {
-            println!("SAMPLE VALUE as hex {:x} - dec {}", sample, sample);
+            //println!("SAMPLE VALUE as hex {:x} - dec {}", sample, sample);
         }
     }
 
@@ -271,9 +271,32 @@ impl<'a> Wave<'a> {
                 println!("time limit reached: sample #{}", i);
                 return
             }
-            println!("SAMPLE VALUE as hex {:x} - dec {}", sample, sample);
+            //println!("SAMPLE VALUE as hex {:x} - dec {}", sample, sample);
         } 
     }
+
+    pub fn get_data(self) -> Vec<i16> {
+        let buf_as_i16 = samples_as_i16(&self.data);
+        buf_as_i16
+    }
+
+    pub fn get_data_until(self, time: u32) -> Vec<i16> {
+        let buf_as_i16 = samples_as_i16(&self.data);
+        let mut samples_limited: Vec<i16> = vec![];
+
+        let time_in_ms: f64 = time as f64 / 1000.0; 
+        println!("time in s: {}", time_in_ms);
+        let sample_limit = (self.config.sample_rate as f64 * time_in_ms) as u32; 
+
+        for (i, sample) in buf_as_i16.iter().enumerate() {
+            if i > sample_limit.try_into().unwrap() {
+                break
+            }
+            samples_limited.push(*sample);
+        }
+        samples_limited
+    }
+
 }
 
 pub fn read<'a>(p: &str, config: &'a Config) -> Wave<'a> {
@@ -319,6 +342,7 @@ impl Config {
         }
     }
 }
+
 
 /* 
  * We have to convert our sample data, which is i16, to u8 when writing a .wav

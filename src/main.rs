@@ -1,4 +1,5 @@
 use wavemaker::wav::*;
+use wavemaker::analyzer::Analyzer;
 
 type Sample = i16;
 const SAMPLE_SIZE: u16 = std::mem::size_of::<Sample>() as u16;
@@ -35,7 +36,7 @@ fn main() {
     // We can also create a WAVE variable by reading it from a file
     // NOTE: At this point this also requires us to pass in a config which we define ourselves. 
     // Removing this necessity is a task for a future refactor
-    let wav = read("sine.wav", &config); 
+    let wav = read("note.wav", &config); 
 
     // We can now read the associated sample data directly from the struct field
     wav.read_data();
@@ -43,5 +44,14 @@ fn main() {
     // We can additionally read only a subset of the sample data by specifying a time limit in ms
     let time = 50;
     wav.read_data_until_ms(time);
+
+    let analyzer = Analyzer {
+        data: wav.get_data_until(10)
+    };
+    println!("Calling analyzer...analysing frequency:");
+    println!("WARNING: Analyzer only analyses for {}ms atm", time);
+    analyzer.calc_freq();
+
+
 }
 
