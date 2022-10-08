@@ -24,7 +24,7 @@ fn main() {
     };
 
    
-    let frequency = 220.0;
+    let frequency = 440.0;
     let amplitude = 0.2; 
 
     // We can then use the config to initialise a new WAV file
@@ -45,11 +45,12 @@ fn main() {
     let time = 50;
     wav.read_data_until_ms(time);
 
+    // Adding an analyzer type allows us to estimate the frequency of the sample data 
+    // NOTE: The method used to estimate the frequency is AMDF, which mostly works for
+    // periodic signals
     let analyzer = Analyzer {
-        data: wav.get_data_until(10)
+        data: wav.get_data_until(time)
     };
-    println!("Calling analyzer...analysing frequency:");
-    println!("WARNING: Analyzer only analyses for {}ms atm", time);
     analyzer.calc_freq();
 
 
