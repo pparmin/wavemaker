@@ -17,9 +17,6 @@ impl Analyzer {
         let amdf_data = self.amdf();
 
         let local_minima = find_peaks(amdf_data);
-        for m in &local_minima {
-            println!("Minimum: {:?}", *m);  
-        }
 
         let period = local_minima[0].position;
         println!("Period in samples: {}", period);
@@ -51,7 +48,7 @@ impl Analyzer {
     }
 }
 
-pub fn find_peaks(amdf: Vec<f32>) -> Vec<Minimum> {
+fn find_peaks(amdf: Vec<f32>) -> Vec<Minimum> {
     let mut local_minima: Vec<Minimum> = vec![];
     let mut minimum;  
     for i in 0..amdf.len() {
@@ -68,7 +65,6 @@ pub fn find_peaks(amdf: Vec<f32>) -> Vec<Minimum> {
                 value: minimum
             };
             local_minima.push(p);
-            println!("new local minimum found at pos {} -- val: {}", i, minimum);
         } 
     }
     local_minima
