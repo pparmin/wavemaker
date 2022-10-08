@@ -31,7 +31,7 @@ impl Analyzer {
         let mut amdf: Vec<f32> = vec![];
 
         // First we vary the offset (k) in a range of L - 1 
-        // The meaning of the upper bound of the summation, L- offset (k) - 1, is to prevent 
+        // The meaning of the upper bound of the summation, L - k - 1, is to prevent 
         // the index from accessing values outside the sample data vector
         for offset in 0..self.data.len() - 1  {
             let mut sum: i32 = 0;
