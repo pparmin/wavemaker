@@ -251,10 +251,6 @@ impl<'a> Wave<'a> {
         let buf_as_i16 = samples_as_i16(&self.data);
         
         println!("size of data vector: {:?}", buf_as_i16.len());
-        //println!("Printing sample data");
-        for sample in buf_as_i16 {
-            //println!("SAMPLE VALUE as hex {:x} - dec {}", sample, sample);
-        }
     }
 
     // This function allows us to define the subset of sample data which we want to read by adding a time parameter in ms. 
@@ -271,7 +267,6 @@ impl<'a> Wave<'a> {
                 println!("time limit reached: sample #{}", i);
                 return
             }
-            //println!("SAMPLE VALUE as hex {:x} - dec {}", sample, sample);
         } 
     }
 
